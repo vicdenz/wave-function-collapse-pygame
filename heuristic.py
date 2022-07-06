@@ -20,12 +20,9 @@ class Heuristic:
         
         return unique
 
-    def parse(self):
+    def parse_tileset(self):
         for row in range(self.rows):
             for column in range(self.columns):
                 image = self.sample_image.crop((row*const.TILE_SIZE, column*const.TILE_SIZE, (row+1)*const.TILE_SIZE, (column+1)*const.TILE_SIZE))
                 if self.unique_tile(image):
                     self.tileset.append(image)
-        
-        for tile in range(len(self.tileset)):
-            self.tileset[tile].save('images/tileset/' + str(tile) + '.png')
