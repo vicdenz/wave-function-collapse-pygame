@@ -1,4 +1,6 @@
 import pygame
+import const
+from heuristic import Heuristic
 
 pygame.display.set_caption("Wave Function Collapse - Terrain Generation")
 ROWS, COLUMNS = 20, 15
@@ -8,6 +10,9 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
 clock = pygame.time.Clock()
 running = True
+
+heuristic = Heuristic(20, 15, const.SAMPLE_IMAGE_PATH)
+heuristic.parse()
 
 def redrawGameWindow():
     screen.fill((255, 255, 255))
