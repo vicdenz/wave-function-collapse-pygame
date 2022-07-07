@@ -12,10 +12,13 @@ clock = pygame.time.Clock()
 running = True
 
 heuristic = Heuristic(20, 15, const.SAMPLE_IMAGE_PATH)
-heuristic.parse()
+heuristic.parse_tileset()
+heuristic.create_map()
 
 def redrawGameWindow():
     screen.fill((255, 255, 255))
+
+    heuristic.draw_map(screen)
 
     pygame.display.update()
 
