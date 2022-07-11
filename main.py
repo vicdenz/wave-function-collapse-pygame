@@ -13,21 +13,22 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 running = True
 
-heuristic = Heuristic(10, 10, const.SAMPLE_IMAGE_PATH)
+heuristic = Heuristic(20, 20, const.SAMPLE_IMAGE_PATH)
 heuristic.parse_tileset()
-heuristic.calculate_adjacent()
+heuristic.calculate_constraints()
 
 new_map = heuristic.generate_map()
 
-to_change = [(2, 2)]
 def redrawGameWindow():
     screen.fill((255, 255, 255))
 
-    heuristic.draw_map(screen, new_map)
-    heuristic.draw_map(screen, heuristic.sample_map, [10*const.TILE_SIZE, 0])
+    heuristic.draw_map(screen, new_map, scroll)
+    # heuristic.draw_map(screen, heuristic.sample_map, [10*const.TILE_SIZE, 0])
 
     pygame.display.update()
 
+scroll = [0, 0]
+scrol_speed = 5
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -36,43 +37,20 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LCTRL:
                 running = False
-            
-            if event.key == pygame.K_SPACE:
-                # if len(to_change) != 0:
-                #     for row, column in to_change.copy():
-                #         constraint = [set(), set(), set(), set()]
-                #         for p_tile in new_map[row][column]:
-                #             inverted_adjacent = heuristic.invert_adjacent(heuristic.allowed_adjacents[p_tile])
-                #             for side in range(len(constraint)):
-                #                 constraint[side] = constraint[side].union(inverted_adjacent[side])
 
-                #         neighboring_sides = [(row, column-1), (row, column+1), (row-1, column), (row+1, column)]
-                #         for i, n_side in enumerate(neighboring_sides):
-                #             n_row = n_side[0]
-                #             n_column = n_side[1]
+    keyboard = pygame.key.get_pressed()
 
-                #             if n_row > -1 and n_column > -1:
-                #                 try:
-                #                     for p_tile in new_map[n_row][n_column].copy():
-                #                         if p_tile in constraint[i]:
-                #                             new_map[n_row][n_column].remove(p_tile)
+    if keyboard[pygame.K_LEFT]:
+        scroll[0] -= scrol_speed
+    
+    if keyboard[pygame.K_RIGHT]:
+        scroll[0] += scrol_speed
 
-                #                             side_coord = neighboring_sides[i]
-                #                             if side_coord not in to_change:
-                #                                 to_change.append(side_coord)
+    if keyboard[pygame.K_UP]:
+        scroll[1] -= scrol_speed
 
-                #                 except IndexError:
-                #                     pass
-
-                #         to_change.remove((row, column))
-                for row in new_map:
-                    new_row = []
-                    for tile in row:
-                        if len(tile) == 1:
-                            new_row.append(tile[0])
-                        else:
-                            new_row.append([])
-                    print(new_row)
+    if keyboard[pygame.K_DOWN]:
+        scroll[1] += scrol_speed
     
     redrawGameWindow()
 pygame.quit()
