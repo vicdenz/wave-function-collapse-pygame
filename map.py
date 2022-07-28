@@ -61,15 +61,13 @@ class Map:
                 p_tile = tile.wave[0]
 
                 for i, [n_row, n_column] in enumerate(self.find_neighboring_sides(r, c)):
-                    if -1 < n_row < len(self.tileset) and -1 < n_column < len(self.tileset):
+                    if -1 < n_row and -1 < n_column:
                         try:
-                            # print(self.constraints[p_tile][i])
-                            # print(self.sample_map[n_row][n_column].wave[0])
                             self.constraints[p_tile][i].add(self.sample_map[n_row][n_column].wave[0])
+                        except IndexError:
+                            pass
                         except KeyError:
                             pass
-
-        print(self.constraints)
 
     def draw_map(self, screen, map, offset=[0, 0]):
         for r, row in enumerate(map):
@@ -87,6 +85,21 @@ class Map:
             constraint.append(constraint_side)
         return constraint
 
+    # Takes a 2d array of Tiles and returns an 2d array of surfaces using the tileset
+    def map_to_surfaces(self, map):
+        new_map = []
+
+        for row in map:
+            new_row = []
+            for tile in row:
+                if tile.entropy == 1:
+                    new_row.append(self.tileset_images[tile.wave[0]])
+                else:
+                    new_row.append(None)
+            new_map.append(new_row)
+        
+        return new_map
+
     # Generates a new pseudo-random map to the sample map
     def generate_map(self):
         map = [[Tile(row, column, self.tileset_images) for column in range(self.columns)] for row in range(self.rows)]
@@ -96,35 +109,37 @@ class Map:
 
             while len(to_change) != 0:
                 for row, column in to_change.copy():
-                    #get contraints from collapsed tile
-                    print(map[row][column].wave)
-                    p_constraint = [set(), set(), set(), set()]
-                    for possibility in map[row][column].wave:
-                        for i, side in enumerate(self.constraints[possibility]):
-                            p_constraint[i] = p_constraint[i].union(side)
-                    #We need to remove the possibilites THAT AREN'T in p_contraint, so we invert it to check
-                    p_constraint = self.invert_adjacent(p_constraint)
+                    if map[row][column].update_entropy() > 0:
+                        #get contraints from collapsed tile
+                        p_constraint = [set(), set(), set(), set()]
+                        for possibility in map[row][column].wave:
+                            for i, side in enumerate(self.constraints[possibility]):
+                                p_constraint[i] = p_constraint[i].union(side)
+                        #We need to remove the possibilites THAT AREN'T in p_contraint, so we invert it to check
+                        p_constraint = self.invert_adjacent(p_constraint)
 
-                    for i, [n_row, n_column] in enumerate(self.find_neighboring_sides(row, column)):
-                        if n_row > -1 and n_column > -1:
-                            try:
-                                n_tile = map[n_row][n_column]
-                                #Loop through wave possibilities and remove not allowed tiles
-                                for possibility in n_tile.wave.copy():
-                                    if possibility in p_constraint[i]:
-                                        n_tile.wave.remove(possibility)
+                        for i, [n_row, n_column] in enumerate(self.find_neighboring_sides(row, column)):
+                            if n_row > -1 and n_column > -1:
+                                try:
+                                    n_tile = map[n_row][n_column]
+                                    #Loop through wave possibilities and remove not allowed tiles
+                                    for possibility in n_tile.wave.copy():
+                                        if possibility in p_constraint[i]:
+                                            n_tile.wave.remove(possibility)
 
-                                        side_coord = (n_row, n_column)
-                                        if side_coord not in to_change:
-                                            to_change.append(side_coord)
-                                if n_tile.update_entropy() == 1:
-                                    n_tile.collapsed = True
+                                            side_coord = (n_row, n_column)
+                                            if side_coord not in to_change:
+                                                to_change.append(side_coord)
+                                    if n_tile.update_entropy() == 1:
+                                        n_tile.collapsed = True
 
-                            except IndexError:
-                                pass
+                                except IndexError:
+                                    pass
 
-                    to_change.remove((row, column))
-        
+                        to_change.remove((row, column))
+                    else:
+                        to_change.remove((row, column))
+
         def find_next_tile():
             lowest_entropy = len(self.tileset)+1
             lowest_coords = []
@@ -145,6 +160,7 @@ class Map:
 
         def collapse_tile(row, column):
             map[row][column].wave = [map[row][column].wave[random.randrange(len(map[row][column].wave))]]
+
             map[row][column].collapsed = True
             map[row][column].update_entropy()
 

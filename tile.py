@@ -19,7 +19,7 @@ class Tile:
         grid_size = ceil(sqrt(len(self.tileset)))
         tile_size = const.TILE_SIZE // grid_size
 
-        if self.collapsed:
+        if self.collapsed and self.entropy > 0:
             surface = self.tileset[self.wave[0]]
             rect = surface.get_rect(x=self.column*const.TILE_SIZE+offset[0], y=self.row*const.TILE_SIZE+offset[1])
 
