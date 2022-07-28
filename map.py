@@ -3,17 +3,18 @@ import pygame
 import const
 import random
 from math import sqrt, ceil
+from tile import Tile
 
 pygame.init()
 
-class Heuristic:
+class Map:
     def __init__(self, rows, columns, sample_image_path):
         self.rows = rows
         self.columns = columns
         self.sample_image = Image.open(sample_image_path).convert('RGB')
         self.tileset = []#Pillow -> Image
         self.tileset_images = []#Pygame -> Surface
-        self.sample_map = [[0 for c in range(self.columns)] for r in range(self.rows)]
+        self.sample_map = []
 
         self.constraints = []
 
@@ -31,7 +32,6 @@ class Heuristic:
     def parse_tileset(self):
         image_rows = self.sample_image.height//const.TILE_SIZE
         image_columns = self.sample_image.width//const.TILE_SIZE
-        self.sample_map = [[0 for c in range(image_columns)] for r in range(image_rows)]
 
         for row in range(image_rows):
             for column in range(image_columns):
@@ -41,54 +41,42 @@ class Heuristic:
 
                     self.tileset_images.append(const.image_to_surface(image))
 
-                self.sample_map[row][column] = self.unique_tile(image)
+        self.sample_map = [[Tile(r, c, self.tileset_images, True, 0) for c in range(self.columns)] for r in range(self.rows)]        
+        for row in range(image_rows):
+            for column in range(image_columns):
+                image = self.sample_image.crop((column*const.TILE_SIZE, row*const.TILE_SIZE, (column+1)*const.TILE_SIZE, (row+1)*const.TILE_SIZE))
+
+                self.sample_map[row][column].wave = [self.unique_tile(image)]
 
     def find_neighboring_sides(self, row, column):
         return [(row-1, column), (row+1, column), (row, column-1), (row, column+1)]
 
     # Calculates the allowed adjacent tiles to each tile type
     def calculate_constraints(self):
-        # 0 = top side, 1 = bottom side, 2 = left side, 3 = size side
-        self.constraints = {t : [set(range(len(self.tileset))), set(range(len(self.tileset))), set(range(len(self.tileset))), set(range(len(self.tileset)))] for t in range(len(self.tileset))}
+        # 0 = top side, 1 = bottom side, 2 = left side, 3 = right side
+        self.constraints = {t : [set(), set(), set(), set()] for t in range(len(self.tileset))}
 
         for r, row in enumerate(self.sample_map):
             for c, tile in enumerate(row):
+                p_tile = tile.wave[0]
 
                 for i, [n_row, n_column] in enumerate(self.find_neighboring_sides(r, c)):
-                    if n_row > -1 and n_column > -1:
+                    if -1 < n_row < len(self.tileset) and -1 < n_column < len(self.tileset):
                         try:
-                            self.constraints[tile][i].remove(self.sample_map[n_row][n_column])
+                            # print(self.constraints[p_tile][i])
+                            # print(self.sample_map[n_row][n_column].wave[0])
+                            self.constraints[p_tile][i].add(self.sample_map[n_row][n_column].wave[0])
                         except KeyError:
                             pass
-                        except IndexError:
-                            pass
+
+        print(self.constraints)
 
     def draw_map(self, screen, map, offset=[0, 0]):
-        grid_size = ceil(sqrt(len(self.tileset)))
-        tile_size = const.TILE_SIZE // grid_size
-
         for r, row in enumerate(map):
             for c, tile in enumerate(row):
-                if type(tile) == list and len(tile) == 1:
-                    tile = tile[0]
-                if type(tile) == int:
-                    surface = self.tileset_images[tile]
-                    rect = surface.get_rect(x=c*const.TILE_SIZE+offset[0], y=r*const.TILE_SIZE+offset[1])
+                tile.draw(offset, screen)
 
-                    screen.blit(surface, rect)
-
-                    font = pygame.font.SysFont("Arial", 16)
-                    text = font.render(str(tile), True, (255, 0, 0))
-                    text_rect = text.get_rect(center=rect.center)
-                    screen.blit(text, text_rect)
-                else:
-                    for possibility in tile:
-                        surface = pygame.transform.scale(self.tileset_images[possibility], (tile_size, tile_size))
-                        rect = surface.get_rect(x=c*const.TILE_SIZE+(possibility%grid_size)*tile_size, y=r*const.TILE_SIZE+(possibility//grid_size)*tile_size)
-
-                        screen.blit(surface, rect)
-
-    # Takes a adjacent list and inverts each side's set
+    # Takes a contraints list and inverts each side's set
     def invert_adjacent(self, adjacent):
         constraint = []
         for side in adjacent:
@@ -101,29 +89,36 @@ class Heuristic:
 
     # Generates a new pseudo-random map to the sample map
     def generate_map(self):
-        wave = [[list(range(len(self.tileset))) for column in range(self.columns)] for row in range(self.rows)]
+        map = [[Tile(row, column, self.tileset_images) for column in range(self.columns)] for row in range(self.rows)]
 
-        def propagate(wave, row, column):
+        def propagate(map, row, column):
             to_change = [(row, column)]
 
             while len(to_change) != 0:
                 for row, column in to_change.copy():
-                    constraint = [set(), set(), set(), set()]
-                    for p_tile in wave[row][column]:
-                        p_constraint = self.constraints[p_tile]
-                        for side in range(len(constraint)):
-                            constraint[side] = constraint[side].union(p_constraint[side])
+                    #get contraints from collapsed tile
+                    print(map[row][column].wave)
+                    p_constraint = [set(), set(), set(), set()]
+                    for possibility in map[row][column].wave:
+                        for i, side in enumerate(self.constraints[possibility]):
+                            p_constraint[i] = p_constraint[i].union(side)
+                    #We need to remove the possibilites THAT AREN'T in p_contraint, so we invert it to check
+                    p_constraint = self.invert_adjacent(p_constraint)
 
                     for i, [n_row, n_column] in enumerate(self.find_neighboring_sides(row, column)):
                         if n_row > -1 and n_column > -1:
                             try:
-                                for p_tile in wave[n_row][n_column].copy():
-                                    if p_tile in constraint[i]:
-                                        wave[n_row][n_column].remove(p_tile)
+                                n_tile = map[n_row][n_column]
+                                #Loop through wave possibilities and remove not allowed tiles
+                                for possibility in n_tile.wave.copy():
+                                    if possibility in p_constraint[i]:
+                                        n_tile.wave.remove(possibility)
 
                                         side_coord = (n_row, n_column)
                                         if side_coord not in to_change:
                                             to_change.append(side_coord)
+                                if n_tile.update_entropy() == 1:
+                                    n_tile.collapsed = True
 
                             except IndexError:
                                 pass
@@ -133,14 +128,15 @@ class Heuristic:
         def find_next_tile():
             lowest_entropy = len(self.tileset)+1
             lowest_coords = []
-            for row in range(len(wave)):
-                for column in range(len(wave[row])):
-                    tile = wave[row][column]
-                    if len(tile) > 1:
-                        if len(tile) < lowest_entropy:
-                            lowest_entropy = len(tile)
+            for row in range(len(map)):
+                for column in range(len(map[row])):
+                    tile = map[row][column]
+                    tile.update_entropy()
+                    if tile.entropy > 1:
+                        if tile.entropy < lowest_entropy:
+                            lowest_entropy = tile.entropy
                             lowest_coords = [(row, column)]
-                        elif len(tile) == lowest_entropy:
+                        elif tile.entropy == lowest_entropy:
                             lowest_coords.append((row, column))
             if lowest_coords == []:
                 return lowest_coords
@@ -148,13 +144,15 @@ class Heuristic:
                 return lowest_coords[random.randint(0, len(lowest_coords)-1)]
 
         def collapse_tile(row, column):
-            wave[row][column] = [wave[row][column][random.randrange(len(wave[row][column]))]]
+            map[row][column].wave = [map[row][column].wave[random.randrange(len(map[row][column].wave))]]
+            map[row][column].collapsed = True
+            map[row][column].update_entropy()
 
         while (next_tile := find_next_tile()) != []:
             current_row = next_tile[0]
             current_column = next_tile[1]
             collapse_tile(current_row, current_column)
 
-            propagate(wave, current_row, current_column)
+            propagate(map, current_row, current_column)
 
-        return wave
+        return map

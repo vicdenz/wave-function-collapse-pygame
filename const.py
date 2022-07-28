@@ -1,6 +1,8 @@
 import pygame
 
-SAMPLE_IMAGE_PATH = "images/simpler_sample_image.png"
+SAMPLE_IMAGE_PATH = "images/small_sample_image.png"
+
+FPS = 60
 
 TILE_SIZE = 32
 
