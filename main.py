@@ -12,7 +12,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
 clock = pygame.time.Clock()
 
-map = Map(50, 50, const.SAMPLE_IMAGE_PATH)
+map = Map(20, 20, const.SAMPLE_IMAGE_PATH)
 map.parse_tileset()
 map.calculate_constraints()
 
@@ -27,7 +27,7 @@ def redrawGameWindow():
     screen.blit(new_map_image, scroll)
     if draw_map_array:
         map.draw_map(screen, new_map, scroll)
-    # map.draw_map(screen, map.sample_map, [20*const.TILE_SIZE+scroll[0], scroll[1]])
+    # map.draw_map(screen, map.sample_map, [map.columns*const.TILE_SIZE+scroll[0], scroll[1]])
 
     pygame.display.update()
 

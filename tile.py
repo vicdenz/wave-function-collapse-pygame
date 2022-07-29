@@ -9,17 +9,37 @@ class Tile:
         self.tileset = tileset#Pygame -> Surface
         self.wave = [tile] if collapsed else list(range(len(self.tileset)))
         self.collapsed = collapsed
-        self.entropy = self.update_entropy()
+        self.tile = tile
 
-    def update_entropy(self):
-        self.entropy = len(self.wave)
-        return self.entropy
+    def get_entropy(self):
+        return len(self.wave)
     
+    def update_wave(self, map, neighbors, contraint):
+        side_coords = []
+
+        for i, [n_row, n_column] in enumerate(neighbors):
+            if n_row > -1 and n_column > -1:
+                try:
+                    n_tile = map[n_row][n_column]
+                    #Loop through wave possibilities and remove not allowed tiles
+                    for possibility in n_tile.wave.copy():
+                        if possibility in contraint[i]:
+                            n_tile.wave.remove(possibility)
+
+                            side_coords.append((n_row, n_column))
+                    if n_tile.get_entropy() == 1:
+                        n_tile.collapsed = True
+
+                except IndexError:
+                    pass
+        
+        return side_coords
+
     def draw(self, offset, screen):
         grid_size = ceil(sqrt(len(self.tileset)))
         tile_size = const.TILE_SIZE // grid_size
 
-        if self.collapsed and self.entropy > 0:
+        if self.collapsed and self.get_entropy() > 0:
             surface = self.tileset[self.wave[0]]
             rect = surface.get_rect(x=self.column*const.TILE_SIZE+offset[0], y=self.row*const.TILE_SIZE+offset[1])
 
