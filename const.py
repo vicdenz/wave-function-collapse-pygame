@@ -4,7 +4,7 @@ SAMPLE_IMAGE_PATH = "images/sample_image.png"
 
 FPS = 60
 
-TILE_SIZE = 32
+TILE_SIZE = 16
 
 def image_to_surface(image):
     # Calculate mode, size and data
