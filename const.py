@@ -1,10 +1,11 @@
 import pygame
 
-SAMPLE_IMAGE_PATH = "images/sample_image.png"
+# SAMPLE_IMAGE_PATH = "images/sample_image.png"
+SAMPLE_IMAGE_PATH = "images/error_sample_image.png"
 
 FPS = 60
 
-TILE_SIZE = 16
+TILE_SIZE = 32
 
 def image_to_surface(image):
     # Calculate mode, size and data
@@ -14,7 +15,7 @@ def image_to_surface(image):
 
     return pygame.image.fromstring(data, size, mode)
 
-def surface_to_image(width, height, surfaces):
+def surfaces_to_image(width, height, surfaces):
     surface = pygame.Surface((width, height))
     surface.fill((255, 255, 255))
 
